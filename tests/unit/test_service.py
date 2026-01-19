@@ -13,6 +13,7 @@ import pytest
 
 from app.backend.services.analysis_service import AnalysisService, LLMAnalysisResult
 from app.backend.models.responses import AnalysisResponse
+from app.backend.ports.llm import LLMResponse
 from app.backend.repositories.in_memory import InMemoryAnalysisRepository
 from app.backend.utils.exceptions import (
     ValidationException,
@@ -58,13 +59,23 @@ def sample_transcript():
 @pytest.fixture
 def sample_llm_result():
     """Sample LLM result for mocking."""
-    return LLMAnalysisResult(
+    parsed = LLMAnalysisResult(
         summary="Client focused on Q3 goals and team metrics.",
         next_actions=[
             "Review team performance data",
             "Schedule follow-up meeting",
             "Document action items"
         ],
+    )
+    return LLMResponse(
+        parsed_result=parsed,
+        raw_response='{"summary": "Client focused on Q3 goals and team metrics.", "next_actions": ["Review team performance data", "Schedule follow-up meeting", "Document action items"]}',
+        input_tokens=80,
+        output_tokens=40,
+        total_tokens=120,
+        latency_ms=250.5,
+        model="gpt-4o",
+        provider="openai",
     )
 
 
@@ -90,8 +101,8 @@ async def test_analyze_with_valid_transcript_returns_analysis(
 
     # Assert
     assert isinstance(result, AnalysisResponse)
-    assert result.summary == sample_llm_result.summary
-    assert result.next_actions == sample_llm_result.next_actions
+    assert result.summary == sample_llm_result.parsed_result.summary
+    assert result.next_actions == sample_llm_result.parsed_result.next_actions
     assert result.transcript == sample_transcript
     assert isinstance(result.id, str)
     assert isinstance(result.created_at, datetime)
@@ -116,7 +127,7 @@ async def test_analyze_stores_result_in_repository(
     mock_repository.save.assert_called_once()
     saved_analysis = mock_repository.save.call_args[0][0]
     assert saved_analysis.id == result.id
-    assert saved_analysis.summary == sample_llm_result.summary
+    assert saved_analysis.summary == sample_llm_result.parsed_result.summary
     assert saved_analysis.transcript == sample_transcript
 
 
@@ -272,7 +283,7 @@ async def test_analyze_logs_started_and_completed(
     # Assert - Focus on behavior, not logging internals
     assert result is not None
     assert result.id is not None
-    assert result.summary == sample_llm_result.summary
+    assert result.summary == sample_llm_result.parsed_result.summary
 
 
 @pytest.mark.asyncio
@@ -330,7 +341,7 @@ async def test_analyze_with_custom_num_next_actions(
 ):
     """Test analysis with custom number of next actions."""
     # Arrange
-    custom_result = LLMAnalysisResult(
+    parsed = LLMAnalysisResult(
         summary="Test summary",
         next_actions=[
             "Action 1",
@@ -340,6 +351,16 @@ async def test_analyze_with_custom_num_next_actions(
             "Action 5"
         ],
     )
+    custom_result = LLMResponse(
+        parsed_result=parsed,
+        raw_response='{"summary": "Test summary", "next_actions": ["Action 1", "Action 2", "Action 3", "Action 4", "Action 5"]}',
+        input_tokens=50,
+        output_tokens=35,
+        total_tokens=85,
+        latency_ms=220.0,
+        model="gpt-4o",
+        provider="openai",
+    )
     mock_llm_adapter.run_completion_async.return_value = custom_result
 
     # Act
@@ -347,7 +368,7 @@ async def test_analyze_with_custom_num_next_actions(
 
     # Assert
     assert len(result.next_actions) == 5
-    assert result.next_actions == custom_result.next_actions
+    assert result.next_actions == custom_result.parsed_result.next_actions
 
 
 @pytest.mark.asyncio
@@ -375,7 +396,7 @@ async def test_analyze_truncates_excess_actions(
 ):
     """Test that service truncates if LLM returns too many actions."""
     # Arrange - LLM returns 5 actions but we only requested 3
-    llm_result = LLMAnalysisResult(
+    parsed = LLMAnalysisResult(
         summary="Test summary",
         next_actions=[
             "Action 1",
@@ -384,6 +405,16 @@ async def test_analyze_truncates_excess_actions(
             "Action 4",
             "Action 5"
         ],
+    )
+    llm_result = LLMResponse(
+        parsed_result=parsed,
+        raw_response='{"summary": "Test summary", "next_actions": ["Action 1", "Action 2", "Action 3", "Action 4", "Action 5"]}',
+        input_tokens=50,
+        output_tokens=30,
+        total_tokens=80,
+        latency_ms=200.0,
+        model="gpt-4o",
+        provider="openai",
     )
     mock_llm_adapter.run_completion_async.return_value = llm_result
 
@@ -403,9 +434,19 @@ async def test_analyze_accepts_fewer_actions_from_llm(
 ):
     """Test that service accepts if LLM returns fewer actions than requested."""
     # Arrange - LLM returns 2 actions but we requested 5
-    llm_result = LLMAnalysisResult(
+    parsed = LLMAnalysisResult(
         summary="Test summary",
         next_actions=["Action 1", "Action 2"],
+    )
+    llm_result = LLMResponse(
+        parsed_result=parsed,
+        raw_response='{"summary": "Test summary", "next_actions": ["Action 1", "Action 2"]}',
+        input_tokens=50,
+        output_tokens=20,
+        total_tokens=70,
+        latency_ms=180.0,
+        model="gpt-4o",
+        provider="openai",
     )
     mock_llm_adapter.run_completion_async.return_value = llm_result
 
