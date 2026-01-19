@@ -6,6 +6,7 @@ mock LLM adapters, and test data generation.
 """
 
 import asyncio
+import os
 from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
 
@@ -22,6 +23,15 @@ from app.core.config import Settings
 from app.main import create_app
 from app.repositories.in_memory import InMemoryAnalysisRepository
 from app.services.analysis_service import AnalysisService, LLMAnalysisResult
+
+
+# ============================================================================
+# Test Environment Setup
+# ============================================================================
+
+# Set test API key for all tests
+# This ensures tests don't use production API key from .env
+os.environ["API_KEY"] = "test-api-key-12345"
 
 
 # ============================================================================
@@ -241,6 +251,12 @@ def client(
 
     # Cleanup: clear overrides after test
     fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_headers() -> dict[str, str]:
+    """Get authentication headers for test requests."""
+    return {"X-API-Key": "test-api-key-12345"}
 
 
 @pytest.fixture

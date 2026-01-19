@@ -23,7 +23,7 @@ from app.utils.exceptions import ExternalServiceException
 class TestCompleteWorkflows:
     """Test complete end-to-end workflows through the entire application stack."""
 
-    def test_complete_analysis_workflow_from_request_to_response(self, client, mock_openai_adapter):
+    def test_complete_analysis_workflow_from_request_to_response(self, client, mock_openai_adapter, auth_headers):
         """
         Test complete workflow: HTTP request → middleware → endpoint → service → adapter → repository → response.
 
@@ -38,8 +38,10 @@ class TestCompleteWorkflows:
         transcript = "Patient reports severe headache for 3 days with nausea and sensitivity to light."
         request_id = "test-e2e-request-id-001"
 
-        # Configure mock to return specific result
-        mock_openai_adapter.run_completion_async.return_value = LLMAnalysisResult(
+        # Configure mock to return specific result (now returns LLMResponse)
+        from app.ports.llm import LLMResponse
+
+        mock_parsed = LLMAnalysisResult(
             summary="Patient presents with migraine symptoms: severe headache, nausea, photophobia for 3 days.",
             next_actions=[
                 "Perform neurological examination",
@@ -48,11 +50,25 @@ class TestCompleteWorkflows:
             ],
         )
 
+        mock_openai_adapter.run_completion_async.return_value = LLMResponse(
+            parsed_result=mock_parsed,
+            raw_response='{"summary":"...","next_actions":[...]}',
+            input_tokens=100,
+            output_tokens=50,
+            total_tokens=150,
+            latency_ms=200.0,
+            model="gpt-4o",
+            provider="openai",
+        )
+
         # Act - Make HTTP GET request
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": transcript},
-            headers={"X-Request-ID": request_id},
+            headers={
+                **auth_headers,
+                "X-Request-ID": request_id,
+            },
         )
 
         # Assert - HTTP response status
@@ -90,7 +106,10 @@ class TestCompleteWorkflows:
         analysis_id = data["id"]
         get_response = client.get(
             f"/api/v1/analyses/{analysis_id}",
-            headers={"X-Request-ID": "test-get-request-002"},
+            headers={
+                **auth_headers,
+                "X-Request-ID": "test-get-request-002",
+            },
         )
 
         assert get_response.status_code == 200, "Failed to retrieve persisted analysis"

@@ -194,7 +194,7 @@ class TestEvaluationValidation:
         assert "at most 1000 characters" in str(exc_info.value)
 
 
-class TestHallucination Flags:
+class TestHallucinationFlags:
     """Test hallucination flagging functionality."""
 
     def test_flag_hallucination(self) -> None:
