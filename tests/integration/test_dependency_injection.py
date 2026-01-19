@@ -10,16 +10,16 @@ Tests the DI factory implementation in app.api.dependencies, including:
 
 import pytest
 
-from app.adapters.groq import GroqAdapter
-from app.adapters.openai import OpenAIAdapter
-from app.api.dependencies import (
+from app.backend.adapters.groq import GroqAdapter
+from app.backend.adapters.openai import OpenAIAdapter
+from app.backend.api.dependencies import (
     get_analysis_service,
     get_llm_adapter,
     get_repository,
     get_settings,
 )
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.services.analysis_service import AnalysisService
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.services.analysis_service import AnalysisService
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +106,7 @@ class TestLLMAdapterFactory:
         adapter = get_llm_adapter()
 
         # Assert - Should get Groq adapter due to automatic fallback
-        from app.adapters.groq import GroqAdapter
+        from app.backend.adapters.groq import GroqAdapter
         assert isinstance(adapter, GroqAdapter), "Should fallback to Groq when OpenAI key missing"
 
     def test_get_llm_adapter_raises_on_missing_groq_key(self, monkeypatch):

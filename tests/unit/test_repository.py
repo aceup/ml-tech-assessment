@@ -10,8 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.utils.exceptions import NotFoundException
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.utils.exceptions import NotFoundException
 from tests.factories.analysis_factory import (
     create_analysis_response,
     create_multiple_analyses,

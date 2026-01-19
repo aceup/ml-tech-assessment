@@ -8,7 +8,7 @@ and details parameter handling for all custom exceptions.
 import pytest
 from fastapi import status
 
-from app.utils.exceptions import (
+from app.backend.utils.exceptions import (
     AppException,
     ExternalServiceException,
     NotFoundException,

@@ -11,12 +11,12 @@ Tests verify end-to-end observability metadata capture including:
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-from app.adapters.openai import OpenAIAdapter
-from app.models.responses import AnalysisResult
-from app.ports.llm import LLMResponse
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.services.analysis_service import AnalysisService, LLMAnalysisResult
-from app.services.pii_service import PIIService
+from app.backend.adapters.openai import OpenAIAdapter
+from app.backend.models.responses import AnalysisResult
+from app.backend.ports.llm import LLMResponse
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.services.analysis_service import AnalysisService, LLMAnalysisResult
+from app.backend.services.pii_service import PIIService
 
 
 class TestObservabilityCapture:
@@ -175,7 +175,7 @@ class TestBackwardCompatibility:
     def test_analysis_response_without_observability_is_valid(self) -> None:
         """Test that AnalysisResponse works without observability (old data)."""
         from datetime import datetime, UTC
-        from app.models.responses import AnalysisResponse
+        from app.backend.models.responses import AnalysisResponse
 
         # Create response without observability (simulates old data)
         response = AnalysisResponse(
@@ -194,7 +194,7 @@ class TestBackwardCompatibility:
     def test_repository_handles_none_observability(self) -> None:
         """Test that repository can save/load analyses without observability."""
         from datetime import datetime, UTC
-        from app.models.responses import AnalysisResponse
+        from app.backend.models.responses import AnalysisResponse
 
         repository = InMemoryAnalysisRepository()
 

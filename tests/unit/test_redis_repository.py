@@ -12,9 +12,9 @@ import pytest
 from redis.asyncio import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from app.models.responses import AnalysisResponse
-from app.repositories.redis import RedisAnalysisRepository, RedisAnalysisRepositorySync
-from app.utils.exceptions import NotFoundException
+from app.backend.models.responses import AnalysisResponse
+from app.backend.repositories.redis import RedisAnalysisRepository, RedisAnalysisRepositorySync
+from app.backend.utils.exceptions import NotFoundException
 
 
 @pytest.fixture

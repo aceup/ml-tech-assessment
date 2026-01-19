@@ -12,9 +12,9 @@ import pytest
 import uuid
 from datetime import UTC, datetime
 
-from app.models.evaluation import AnalysisEvaluation, EvaluationRequest
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.models.responses import AnalysisResponse
+from app.backend.models.evaluation import AnalysisEvaluation, EvaluationRequest
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.models.responses import AnalysisResponse
 
 
 class TestEvaluationWorkflow:

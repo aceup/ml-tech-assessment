@@ -8,7 +8,7 @@ including field constraints and custom validators.
 import pytest
 from pydantic import ValidationError
 
-from app.models.requests import AnalyzeTranscriptRequest, BatchAnalyzeRequest
+from app.backend.models.requests import AnalyzeTranscriptRequest, BatchAnalyzeRequest
 
 
 class TestAnalyzeTranscriptRequest:

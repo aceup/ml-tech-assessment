@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.services.analysis_service import LLMAnalysisResult
-from app.utils.exceptions import ExternalServiceException
+from app.backend.services.analysis_service import LLMAnalysisResult
+from app.backend.utils.exceptions import ExternalServiceException
 
 
 class TestCompleteWorkflows:
@@ -39,7 +39,7 @@ class TestCompleteWorkflows:
         request_id = "test-e2e-request-id-001"
 
         # Configure mock to return specific result (now returns LLMResponse)
-        from app.ports.llm import LLMResponse
+        from app.backend.ports.llm import LLMResponse
 
         mock_parsed = LLMAnalysisResult(
             summary="Patient presents with migraine symptoms: severe headache, nausea, photophobia for 3 days.",
@@ -339,7 +339,7 @@ class TestCompleteWorkflows:
         ]
 
         # Configure mock to return different results based on input
-        from app.ports.llm import LLMResponse
+        from app.backend.ports.llm import LLMResponse
 
         def mock_llm_response(*args, **kwargs):
             # Extract transcript from call arguments

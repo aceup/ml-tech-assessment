@@ -18,10 +18,10 @@ import pytest
 from openai import APIError, APITimeoutError
 from openai._exceptions import APIConnectionError
 
-from app.adapters.groq import GroqAdapter
-from app.adapters.openai import OpenAIAdapter
-from app.models.responses import AnalysisResult
-from app.ports.llm import LLm, LLMResponse
+from app.backend.adapters.groq import GroqAdapter
+from app.backend.adapters.openai import OpenAIAdapter
+from app.backend.models.responses import AnalysisResult
+from app.backend.ports.llm import LLm, LLMResponse
 
 
 # Test DTO for validation
@@ -250,8 +250,8 @@ def test_openai_retries_on_transient_errors(mock_openai_client: Mock) -> None:
 # ============================================================================
 
 
-@patch("app.adapters.groq.Groq")
-@patch("app.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
 def test_groq_adapter_implements_llm_port(mock_async_groq: Mock, mock_groq: Mock) -> None:
     """Test 9: Verify GroqAdapter implements LLm port interface."""
     # Mock the client constructors
@@ -262,8 +262,8 @@ def test_groq_adapter_implements_llm_port(mock_async_groq: Mock, mock_groq: Mock
     assert isinstance(adapter, LLm), "GroqAdapter must implement LLm port"
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_run_completion_sync_success(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 10: Groq synchronous completion returns parsed DTO."""
     # Setup mock response with JSON content
@@ -299,8 +299,8 @@ def test_groq_run_completion_sync_success(mock_groq_client: Mock, mock_async_gro
 
 
 @pytest.mark.asyncio
-@patch("app.adapters.groq.Groq")
-@patch("app.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
 async def test_groq_run_completion_async_success(mock_async_groq: Mock, mock_groq: Mock) -> None:
     """Test 11: Groq asynchronous completion returns LLMResponse with observability."""
     # Setup mock response
@@ -350,8 +350,8 @@ async def test_groq_run_completion_async_success(mock_async_groq: Mock, mock_gro
     mock_async_client.chat.completions.create.assert_called_once()
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_parses_json_response_to_dto(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 12: Groq correctly parses JSON response into DTO structure."""
     # Setup mock with AnalysisResult JSON
@@ -387,8 +387,8 @@ def test_groq_parses_json_response_to_dto(mock_groq_client: Mock, mock_async_gro
     assert "Schedule follow-up" in result.next_actions
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_with_api_error_raises_exception(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 13: Groq adapter raises exception on API error."""
     # Setup mock to raise exception
@@ -409,8 +409,8 @@ def test_groq_with_api_error_raises_exception(mock_groq_client: Mock, mock_async
     assert "Groq API error" in str(exc_info.value)
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_with_empty_response_raises_exception(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 14: Groq adapter raises exception when response content is None."""
     # Setup mock with None content
@@ -436,8 +436,8 @@ def test_groq_with_empty_response_raises_exception(mock_groq_client: Mock, mock_
     assert "empty response" in str(exc_info.value).lower()
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_with_malformed_json_raises_exception(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 15: Groq adapter raises exception with invalid JSON response."""
     # Setup mock with malformed JSON
@@ -461,8 +461,8 @@ def test_groq_with_malformed_json_raises_exception(mock_groq_client: Mock, mock_
         )
 
 
-@patch("app.adapters.groq.AsyncGroq")
-@patch("app.adapters.groq.Groq")
+@patch("app.backend.adapters.groq.AsyncGroq")
+@patch("app.backend.adapters.groq.Groq")
 def test_groq_with_missing_fields_raises_exception(mock_groq_client: Mock, mock_async_groq: Mock) -> None:
     """Test 16: Groq adapter raises exception when required DTO fields are missing."""
     # Setup mock with incomplete JSON (missing next_actions field)

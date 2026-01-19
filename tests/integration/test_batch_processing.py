@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.services.analysis_service import LLMAnalysisResult
-from app.utils.exceptions import ExternalServiceException
+from app.backend.services.analysis_service import LLMAnalysisResult
+from app.backend.utils.exceptions import ExternalServiceException
 
 
 def test_batch_endpoint_with_partial_failures_returns_mixed_results(

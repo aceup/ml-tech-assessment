@@ -17,8 +17,8 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
-from app.services.analysis_service import LLMAnalysisResult
+from app.backend.core.config import Settings
+from app.backend.services.analysis_service import LLMAnalysisResult
 
 
 # ============================================================================
@@ -563,8 +563,8 @@ def test_health_ready_fails_when_dependency_down(
     )
 
     # Update dependency override
-    from app.api.dependencies import get_settings
-    from app.main import create_app
+    from app.backend.api.dependencies import get_settings
+    from app.backend.main import create_app
 
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: unhealthy_settings

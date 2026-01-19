@@ -8,7 +8,7 @@ Enhanced with unique ID generation and batch creation capabilities.
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.models.responses import AnalysisResponse
+from app.backend.models.responses import AnalysisResponse
 
 
 def make_analysis_response(**overrides) -> AnalysisResponse:

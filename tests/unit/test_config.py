@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from app.core.config import Settings
+from app.backend.core.config import Settings
 
 
 class TestLLMProviderFallback:

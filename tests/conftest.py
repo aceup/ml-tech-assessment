@@ -13,16 +13,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import (
+from app.backend.api.dependencies import (
     get_analysis_service,
     get_llm_adapter,
     get_repository,
     get_settings,
 )
-from app.core.config import Settings
-from app.main import create_app
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.services.analysis_service import AnalysisService, LLMAnalysisResult
+from app.backend.core.config import Settings
+from app.backend.main import create_app
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.services.analysis_service import AnalysisService, LLMAnalysisResult
 
 
 # ============================================================================
@@ -123,7 +123,7 @@ def mock_openai_adapter() -> AsyncMock:
 
     Returns AsyncMock with proper async behavior and default responses.
     """
-    from app.ports.llm import LLMResponse
+    from app.backend.ports.llm import LLMResponse
 
     mock = AsyncMock()
     mock_parsed = LLMAnalysisResult(
@@ -152,7 +152,7 @@ def mock_groq_adapter() -> AsyncMock:
 
     Returns AsyncMock with proper async behavior and default responses.
     """
-    from app.ports.llm import LLMResponse
+    from app.backend.ports.llm import LLMResponse
 
     mock = AsyncMock()
     mock_parsed = LLMAnalysisResult(
@@ -240,7 +240,7 @@ def client(
     )
 
     # Override get_settings BEFORE creating app so api_key=None is used
-    from app.core import config as config_module
+    from app.backend.core import config as config_module
 
     original_get_settings = config_module.get_settings
     get_settings.cache_clear()
@@ -307,7 +307,7 @@ async def async_client(
 @pytest.fixture
 def pii_service_enabled():
     """Create PII service with detection enabled."""
-    from app.services.pii_service import PIIService
+    from app.backend.services.pii_service import PIIService
 
     return PIIService(enabled=True)
 
@@ -315,7 +315,7 @@ def pii_service_enabled():
 @pytest.fixture
 def pii_service_disabled():
     """Create PII service with detection disabled."""
-    from app.services.pii_service import PIIService
+    from app.backend.services.pii_service import PIIService
 
     return PIIService(enabled=False)
 
@@ -323,7 +323,7 @@ def pii_service_disabled():
 @pytest.fixture
 def guardrails_service():
     """Create guardrails service with standard limits."""
-    from app.services.guardrails_service import GuardrailsService
+    from app.backend.services.guardrails_service import GuardrailsService
 
     return GuardrailsService(
         max_input_tokens=10000,
@@ -334,7 +334,7 @@ def guardrails_service():
 @pytest.fixture
 def strict_guardrails_service():
     """Create guardrails service with strict limits for testing."""
-    from app.services.guardrails_service import GuardrailsService
+    from app.backend.services.guardrails_service import GuardrailsService
 
     return GuardrailsService(
         max_input_tokens=100,

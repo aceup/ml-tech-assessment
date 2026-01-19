@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.adapters.openai import OpenAIAdapter
-from app.models.responses import AnalysisResponse
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.services.analysis_service import AnalysisService, LLMAnalysisResult
-from app.services.guardrails_service import GuardrailsService
-from app.services.pii_service import PIIService
+from app.backend.adapters.openai import OpenAIAdapter
+from app.backend.models.responses import AnalysisResponse
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.services.analysis_service import AnalysisService, LLMAnalysisResult
+from app.backend.services.guardrails_service import GuardrailsService
+from app.backend.services.pii_service import PIIService
 
 
 @pytest.fixture

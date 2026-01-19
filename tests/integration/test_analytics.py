@@ -14,12 +14,12 @@ from unittest.mock import Mock
 import uuid
 from datetime import UTC, datetime
 
-from app.api.v1.endpoints.analytics import calculate_cost
-from app.models.evaluation import AnalysisEvaluation
-from app.models.observability import ObservabilityMetadata
-from app.models.responses import AnalysisResponse
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.services.analysis_service import AnalysisService
+from app.backend.api.v1.endpoints.analytics import calculate_cost
+from app.backend.models.evaluation import AnalysisEvaluation
+from app.backend.models.observability import ObservabilityMetadata
+from app.backend.models.responses import AnalysisResponse
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.services.analysis_service import AnalysisService
 
 
 class TestCostCalculation:

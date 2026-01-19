@@ -1,8 +1,8 @@
-from app import configurations
+from app.backend import configurations
 import pydantic
 import pytest
 from tests.adapters import mock_data
-from app.adapters import openai
+from app.backend.adapters import openai
 
 
 class Response(pydantic.BaseModel):

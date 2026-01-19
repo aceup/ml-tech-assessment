@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from app.services.guardrails_service import (
+from app.backend.services.guardrails_service import (
     GuardrailsService,
     InvalidOutputError,
     TokenLimitExceededError,

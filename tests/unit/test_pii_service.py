@@ -10,7 +10,7 @@ Or skip with: pytest -m "not pii"
 
 import pytest
 
-from app.services.pii_service import PIIDetectionResult, PIIService
+from app.backend.services.pii_service import PIIDetectionResult, PIIService
 
 # Skip all PII tests if spaCy model is not available
 try:

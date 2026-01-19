@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from app.services.analysis_service import AnalysisService, LLMAnalysisResult
-from app.models.responses import AnalysisResponse
-from app.repositories.in_memory import InMemoryAnalysisRepository
-from app.utils.exceptions import (
+from app.backend.services.analysis_service import AnalysisService, LLMAnalysisResult
+from app.backend.models.responses import AnalysisResponse
+from app.backend.repositories.in_memory import InMemoryAnalysisRepository
+from app.backend.utils.exceptions import (
     ValidationException,
     ExternalServiceException,
     NotFoundException,

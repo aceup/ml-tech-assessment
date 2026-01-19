@@ -7,7 +7,7 @@ Tests API key requirement on protected endpoints.
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
+from app.backend.main import create_app
 
 
 class TestAPIKeyAuthentication:
@@ -24,7 +24,7 @@ class TestAPIKeyAuthentication:
         os.environ["API_KEY"] = "test-api-key-12345"
 
         # Clear cached dependencies to ensure fresh repository
-        from app.api.dependencies import get_repository
+        from app.backend.api.dependencies import get_repository
         get_repository.cache_clear()
 
         app = create_app()

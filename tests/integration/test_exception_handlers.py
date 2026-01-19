@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.utils.exceptions import (
+from app.backend.utils.exceptions import (
     ExternalServiceException,
     NotFoundException,
     ValidationException,
@@ -212,7 +212,7 @@ def test_external_service_exception_handler_returns_502_json(
     - Response includes error details
     """
     # Arrange - Mock LLM adapter to fail with ExternalServiceException
-    from app.utils.exceptions import ExternalServiceException
+    from app.backend.utils.exceptions import ExternalServiceException
 
     mock_error = ExternalServiceException(
         service="OpenAI",

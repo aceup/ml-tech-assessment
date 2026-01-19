@@ -80,7 +80,7 @@ services:
 
     # Volume mounts for development (optional - uncomment for hot reload)
     # volumes:
-    #   - ./app:/app/app:ro
+    #   - ./app/backend:/app/app/backend:ro
 
     # Logging configuration
     logging:
@@ -95,7 +95,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./app/frontend
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:8000
