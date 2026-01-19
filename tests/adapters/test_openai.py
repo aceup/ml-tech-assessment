@@ -1,7 +1,8 @@
-from app import configurations
+from app.backend import configurations
 import pydantic
+import pytest
 from tests.adapters import mock_data
-from app.adapters import openai
+from app.backend.adapters import openai
 
 
 class Response(pydantic.BaseModel):
@@ -9,6 +10,7 @@ class Response(pydantic.BaseModel):
     action_items: list[str]
 
 
+@pytest.mark.skip(reason="Requires valid OpenAI API key - integration test only")
 def test_openai_adapter() -> None:
     # Configuration
     env_variables = configurations.EnvConfigs()

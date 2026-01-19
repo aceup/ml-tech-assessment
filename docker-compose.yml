@@ -1,0 +1,161 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      ml-tech-network:
+        ipv4_address: 172.25.0.10
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: transcript-analysis-api:latest
+
+    # Port mapping
+    ports:
+      - "8000:8000"
+
+    # Environment variables (load from .env file)
+    env_file:
+      - .env
+
+    # Environment overrides for container
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - REPOSITORY_BACKEND=redis
+      - REDIS_HOST=redis
+      - REDIS_FALLBACK_IP=172.25.0.10
+      - REDIS_PORT=6379
+      - ENABLE_PII_DETECTION=false
+      - LLM_PROVIDER=groq
+
+    # Dependencies
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Volume mounts for development (optional - uncomment for hot reload)
+    # volumes:
+    #   - ./app/backend:/app/app/backend:ro
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network configuration
+    networks:
+      - ml-tech-network
+
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_API_KEY=${API_KEY}
+    image: transcript-analysis-frontend:latest
+
+    # Port mapping
+    ports:
+      - "3000:3000"
+
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_KEY=${API_KEY}
+
+    # Dependencies
+    depends_on:
+      app:
+        condition: service_healthy
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network configuration
+    networks:
+      - ml-tech-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  ml-tech-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

@@ -1,1 +1,83 @@
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Python cache and compiled files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Testing and coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# UV lock file (optional - uncomment if you want to regenerate)
+# uv.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Internal documentation (not for submission)
+docs/
+*_SUCCESS.md
+*_VERIFICATION.md
+*_REPORT.md
+*_SUMMARY.md
+*_INDEX.md
+CLAUDE.md
+
+# Tool state directories
+.swarm/
+.claude-flow/
+.claude/
+.mcp.json
+
+# Frontend artifacts in root (should be in frontend/ only)
+/node_modules/
+/package-lock.json
+/package.json
+/docker-compose.dev.yml
+
+# Redis data
+redis-data/
+*.rdb
+*.aof
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
