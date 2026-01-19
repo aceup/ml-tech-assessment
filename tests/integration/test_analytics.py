@@ -51,7 +51,7 @@ class TestCostCalculation:
 
         expected = (5000 / 1_000_000 * 0.59) + (2000 / 1_000_000 * 0.79)
         assert cost == pytest.approx(expected, rel=1e-6)
-        assert cost == pytest.approx(0.004535, rel=1e-6)
+        assert cost == pytest.approx(0.00453, rel=1e-6)
 
     def test_calculate_cost_unknown_model_uses_default(self) -> None:
         """Test unknown model defaults to most expensive pricing."""
@@ -248,7 +248,7 @@ class TestLatencyPercentiles:
         p99 = statistics.quantiles(sorted_latencies, n=100)[98]
 
         # Verify calculations
-        assert p50 == 275.0  # Median of 10 values
+        assert p50 == 325.0  # Median of 10 values (average of 300 and 350)
         assert p95 > p50  # 95th should be higher than median
         assert p99 > p95  # 99th should be higher than 95th
-        assert p99 <= max(latencies)  # 99th should be at or below max
+        # Note: p99 may be extrapolated beyond max with small sample sizes
