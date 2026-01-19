@@ -6,8 +6,12 @@ following the hexagonal architecture pattern.
 """
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from app.models.responses import AnalysisResponse
+
+if TYPE_CHECKING:
+    from app.models.evaluation import AnalysisEvaluation
 
 
 class AnalysisRepository(ABC):
@@ -90,5 +94,44 @@ class AnalysisRepository(ABC):
         Clear all analyses.
 
         WARNING: This is destructive and should only be used for testing.
+        """
+        pass
+
+    @abstractmethod
+    def save_evaluation(self, evaluation: "AnalysisEvaluation") -> "AnalysisEvaluation":
+        """
+        Save a human evaluation for an analysis.
+
+        Args:
+            evaluation: Evaluation to save
+
+        Returns:
+            Saved evaluation
+
+        Raises:
+            Exception: If save fails
+        """
+        pass
+
+    @abstractmethod
+    def get_evaluation(self, analysis_id: str) -> "AnalysisEvaluation | None":
+        """
+        Get evaluation for an analysis.
+
+        Args:
+            analysis_id: Analysis identifier
+
+        Returns:
+            Evaluation if exists, None otherwise
+        """
+        pass
+
+    @abstractmethod
+    def list_evaluations(self) -> list["AnalysisEvaluation"]:
+        """
+        List all evaluations.
+
+        Returns:
+            List of all evaluations
         """
         pass

@@ -12,9 +12,10 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.adapters.openai import OpenAIAdapter
 from app.core.logging import get_logger
+from app.models.observability import ObservabilityMetadata
 from app.models.responses import AnalysisResponse
-from app.ports.llm import LLm
-from app.prompts import RAW_USER_PROMPT, SYSTEM_PROMPT
+from app.ports.llm import LLm, LLMResponse
+from app.prompts import PROMPT_VERSION, RAW_USER_PROMPT, SYSTEM_PROMPT
 from app.repositories.in_memory import InMemoryAnalysisRepository
 from app.services.guardrails_service import GuardrailsService, TokenLimitExceededError
 from app.services.pii_service import PIIService
@@ -139,9 +140,11 @@ class AnalysisService:
         try:
             # SECURITY LAYER 1: PII Detection & Anonymization
             processed_transcript = transcript
+            pii_detected_entities = []
             if self.pii_service:
                 pii_result = self.pii_service.detect_and_anonymize(transcript)
                 if pii_result.pii_detected:
+                    pii_detected_entities = pii_result.entities_found
                     logger.warning(
                         "pii_found_in_transcript",
                         analysis_id=analysis_id,
@@ -185,10 +188,31 @@ class AnalysisService:
             system_prompt = SYSTEM_PROMPT.format(num_next_actions=num_next_actions)
 
             # SECURITY LAYER 3: LLM Processing
-            result = await self.llm_adapter.run_completion_async(
+            llm_response: LLMResponse = await self.llm_adapter.run_completion_async(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 dto=LLMAnalysisResult,
+            )
+
+            # Extract parsed result from LLMResponse
+            result = llm_response.parsed_result
+
+            # Build observability metadata
+            observability = ObservabilityMetadata(
+                prompt_version=PROMPT_VERSION,
+                raw_system_prompt=system_prompt,
+                raw_user_prompt=user_prompt,
+                raw_llm_response=llm_response.raw_response,
+                request_id=None,  # TODO: Extract from middleware context if available
+                latency_ms=llm_response.latency_ms,
+                input_tokens=llm_response.input_tokens,
+                output_tokens=llm_response.output_tokens,
+                total_tokens=llm_response.total_tokens,
+                llm_provider=llm_response.provider,
+                llm_model=llm_response.model,
+                retry_count=0,
+                validation_failures=[],
+                pii_detected=bool(pii_detected_entities),
             )
 
             # SECURITY LAYER 4: Output Validation
@@ -242,6 +266,7 @@ class AnalysisService:
                 next_actions=result.next_actions,
                 created_at=datetime.now(UTC),
                 transcript=transcript,  # Store original, not anonymized
+                observability=observability,  # Attach observability metadata
             )
 
             # Save to repository

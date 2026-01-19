@@ -21,7 +21,7 @@ from openai._exceptions import APIConnectionError
 from app.adapters.groq import GroqAdapter
 from app.adapters.openai import OpenAIAdapter
 from app.models.responses import AnalysisResult
-from app.ports.llm import LLm
+from app.ports.llm import LLm, LLMResponse
 
 
 # Test DTO for validation
@@ -82,17 +82,26 @@ def test_openai_run_completion_sync_success(mock_openai_client: Mock) -> None:
 async def test_openai_run_completion_async_success(
     mock_async_openai: Mock,
 ) -> None:
-    """Test 3: OpenAI asynchronous completion returns parsed DTO."""
+    """Test 3: OpenAI asynchronous completion returns LLMResponse with observability."""
     # Setup mock response
     mock_parsed = MockAnalysisResponse(
         summary="Async test summary", next_actions=["Async action 1"]
     )
     mock_message = Mock()
     mock_message.parsed = mock_parsed
+    mock_message.content = '{"summary": "Async test summary", "next_actions": ["Async action 1"]}'
     mock_choice = Mock()
     mock_choice.message = mock_message
+
+    # Mock token usage
+    mock_usage = Mock()
+    mock_usage.prompt_tokens = 100
+    mock_usage.completion_tokens = 50
+    mock_usage.total_tokens = 150
+
     mock_completion = Mock()
     mock_completion.choices = [mock_choice]
+    mock_completion.usage = mock_usage
 
     # Configure async mock
     mock_async_client = Mock()
@@ -109,10 +118,17 @@ async def test_openai_run_completion_async_success(
         dto=MockAnalysisResponse,
     )
 
-    # Assert
-    assert isinstance(result, MockAnalysisResponse)
-    assert result.summary == "Async test summary"
-    assert result.next_actions == ["Async action 1"]
+    # Assert - now returns LLMResponse
+    assert isinstance(result, LLMResponse)
+    assert isinstance(result.parsed_result, MockAnalysisResponse)
+    assert result.parsed_result.summary == "Async test summary"
+    assert result.parsed_result.next_actions == ["Async action 1"]
+    assert result.input_tokens == 100
+    assert result.output_tokens == 50
+    assert result.total_tokens == 150
+    assert result.model == "gpt-4"
+    assert result.provider == "openai"
+    assert result.latency_ms > 0  # Should have some latency
     mock_async_client.beta.chat.completions.parse.assert_called_once()
 
 
@@ -286,7 +302,7 @@ def test_groq_run_completion_sync_success(mock_groq_client: Mock, mock_async_gro
 @patch("app.adapters.groq.Groq")
 @patch("app.adapters.groq.AsyncGroq")
 async def test_groq_run_completion_async_success(mock_async_groq: Mock, mock_groq: Mock) -> None:
-    """Test 11: Groq asynchronous completion returns parsed DTO."""
+    """Test 11: Groq asynchronous completion returns LLMResponse with observability."""
     # Setup mock response
     json_response = json.dumps(
         {"summary": "Async Groq summary", "next_actions": ["Async Groq action"]}
@@ -295,8 +311,16 @@ async def test_groq_run_completion_async_success(mock_async_groq: Mock, mock_gro
     mock_message.content = json_response
     mock_choice = Mock()
     mock_choice.message = mock_message
+
+    # Mock token usage
+    mock_usage = Mock()
+    mock_usage.prompt_tokens = 80
+    mock_usage.completion_tokens = 40
+    mock_usage.total_tokens = 120
+
     mock_completion = Mock()
     mock_completion.choices = [mock_choice]
+    mock_completion.usage = mock_usage
 
     # Configure async mock
     mock_async_client = Mock()
@@ -312,10 +336,17 @@ async def test_groq_run_completion_async_success(mock_async_groq: Mock, mock_gro
         dto=MockAnalysisResponse,
     )
 
-    # Assert
-    assert isinstance(result, MockAnalysisResponse)
-    assert result.summary == "Async Groq summary"
-    assert result.next_actions == ["Async Groq action"]
+    # Assert - now returns LLMResponse
+    assert isinstance(result, LLMResponse)
+    assert isinstance(result.parsed_result, MockAnalysisResponse)
+    assert result.parsed_result.summary == "Async Groq summary"
+    assert result.parsed_result.next_actions == ["Async Groq action"]
+    assert result.input_tokens == 80
+    assert result.output_tokens == 40
+    assert result.total_tokens == 120
+    assert result.model == "llama-3.3-70b-versatile"  # default model
+    assert result.provider == "groq"
+    assert result.latency_ms > 0  # Should have some latency
     mock_async_client.chat.completions.create.assert_called_once()
 
 

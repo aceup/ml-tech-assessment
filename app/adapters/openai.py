@@ -1,7 +1,9 @@
 import openai
 import pydantic
+import time
 
 from app import ports
+from app.ports.llm import LLMResponse
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -124,7 +126,7 @@ class OpenAIAdapter(ports.LLm):
 
     async def run_completion_async(
         self, system_prompt: str, user_prompt: str, dto: type[pydantic.BaseModel]
-    ) -> pydantic.BaseModel:
+    ) -> LLMResponse:
         """
         Executes a completion request using the OpenAI API with the provided prompts and response format.
 
@@ -134,7 +136,7 @@ class OpenAIAdapter(ports.LLm):
             dto (Type[pydantic.BaseModel]): A Pydantic model class used to define the structure of the API response.
 
         Returns:
-         pydantic.BaseModel: An instance of the provided DTO class populated with the API response data.
+            LLMResponse: Structured response with parsed result and observability metadata.
 
          more info: https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat
          """
@@ -160,9 +162,13 @@ class OpenAIAdapter(ports.LLm):
             if self._max_tokens:
                 api_params["max_tokens"] = self._max_tokens
 
+            # Add timing
+            start_time = time.perf_counter()
             completion = await self._aclient.beta.chat.completions.parse(**api_params)
+            latency_ms = (time.perf_counter() - start_time) * 1000
 
             parsed_result = completion.choices[0].message.parsed
+            raw_response = completion.choices[0].message.content or ""
 
             # Log token usage
             if hasattr(completion, "usage") and completion.usage:
@@ -172,9 +178,20 @@ class OpenAIAdapter(ports.LLm):
                     prompt_tokens=completion.usage.prompt_tokens,
                     completion_tokens=completion.usage.completion_tokens,
                     total_tokens=completion.usage.total_tokens,
+                    latency_ms=latency_ms,
                 )
 
-            return parsed_result
+            # Return structured response with observability metadata
+            return LLMResponse(
+                parsed_result=parsed_result,
+                raw_response=raw_response,
+                input_tokens=completion.usage.prompt_tokens,
+                output_tokens=completion.usage.completion_tokens,
+                total_tokens=completion.usage.total_tokens,
+                latency_ms=latency_ms,
+                model=self._model,
+                provider="openai",
+            )
 
         except openai.APIError as e:
             logger.error(

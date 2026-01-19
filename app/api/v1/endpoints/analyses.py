@@ -5,11 +5,14 @@ Provides CRUD operations for transcript analysis.
 """
 
 import asyncio
+import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import get_analysis_service
+from app.models.evaluation import AnalysisEvaluation, EvaluationRequest
 from app.models.requests import AnalyzeTranscriptRequest, BatchAnalyzeRequest
 from app.models.responses import AnalysisResponse, BatchAnalysisResponse
 from app.services.analysis_service import AnalysisService
@@ -101,6 +104,57 @@ async def get_analysis(
     - Created timestamp
     """
     return service.get_by_id(analysis_id)
+
+
+@router.post(
+    "/{analysis_id}/feedback",
+    response_model=AnalysisEvaluation,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit Evaluation Feedback",
+    description="Submit human feedback/evaluation for an analysis. "
+    "This enables collecting quality ratings, hallucination flags, and comments "
+    "from real users (doctors, coaches, QA teams) to build golden datasets.",
+)
+async def submit_evaluation(
+    analysis_id: str,
+    request: EvaluationRequest,
+    service: Annotated[AnalysisService, Depends(get_analysis_service)],
+) -> AnalysisEvaluation:
+    """
+    Submit user feedback/evaluation for an analysis.
+
+    Human-in-the-loop evaluation system for tracking AI quality.
+    Humans (doctors, coaches, QA) rate the analysis on:
+    - Score: 1-5 stars
+    - Hallucination: True if AI made things up
+    - Comment: Optional written feedback
+
+    This data builds golden datasets for prompt regression testing.
+    """
+    # Verify analysis exists
+    service.get_by_id(analysis_id)
+
+    # Create and save evaluation
+    evaluation = AnalysisEvaluation(
+        id=str(uuid.uuid4()),
+        analysis_id=analysis_id,
+        score=request.score,
+        is_hallucination=request.is_hallucination,
+        comment=request.comment,
+        evaluated_at=datetime.now(UTC),
+    )
+
+    service.repository.save_evaluation(evaluation)
+
+    logger.info(
+        "evaluation_submitted",
+        evaluation_id=evaluation.id,
+        analysis_id=analysis_id,
+        score=request.score,
+        is_hallucination=request.is_hallucination,
+    )
+
+    return evaluation
 
 
 @router.get(
