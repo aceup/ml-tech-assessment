@@ -85,6 +85,24 @@ async def analyze_transcript_get(
 
 
 @router.get(
+    "/evaluations",
+    response_model=list[AnalysisEvaluation],
+    status_code=status.HTTP_200_OK,
+    summary="List All Evaluations",
+    description="Get all submitted evaluations/feedback for analyses.",
+)
+async def list_evaluations(
+    service: Annotated[AnalysisService, Depends(get_analysis_service)],
+) -> list[AnalysisEvaluation]:
+    """
+    List all evaluation feedback submitted for analyses.
+
+    Returns all evaluations including scores, hallucination flags, and comments.
+    """
+    return service.repository.list_evaluations()
+
+
+@router.get(
     "/{analysis_id}",
     response_model=AnalysisResponse,
     summary="Get Analysis by ID",
