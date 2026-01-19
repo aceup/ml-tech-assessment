@@ -8,6 +8,7 @@ import threading
 from datetime import datetime
 from typing import Dict
 
+from app.models.evaluation import AnalysisEvaluation
 from app.models.responses import AnalysisResponse
 from app.ports.repository import AnalysisRepository
 from app.utils.exceptions import NotFoundException
@@ -22,6 +23,7 @@ class InMemoryAnalysisRepository(AnalysisRepository):
 
     def __init__(self) -> None:
         self._storage: Dict[str, AnalysisResponse] = {}
+        self._evaluations: Dict[str, AnalysisEvaluation] = {}  # Key: analysis_id
         self._lock = threading.Lock()
 
     def save(self, analysis: AnalysisResponse) -> AnalysisResponse:
@@ -98,3 +100,40 @@ class InMemoryAnalysisRepository(AnalysisRepository):
         """Clear all stored analyses (useful for testing)."""
         with self._lock:
             self._storage.clear()
+
+    def save_evaluation(self, evaluation: AnalysisEvaluation) -> AnalysisEvaluation:
+        """
+        Save a human evaluation for an analysis.
+
+        Args:
+            evaluation: Evaluation to save
+
+        Returns:
+            Saved evaluation
+        """
+        with self._lock:
+            self._evaluations[evaluation.analysis_id] = evaluation
+        return evaluation
+
+    def get_evaluation(self, analysis_id: str) -> AnalysisEvaluation | None:
+        """
+        Get evaluation for an analysis.
+
+        Args:
+            analysis_id: Analysis identifier
+
+        Returns:
+            Evaluation if exists, None otherwise
+        """
+        with self._lock:
+            return self._evaluations.get(analysis_id)
+
+    def list_evaluations(self) -> list[AnalysisEvaluation]:
+        """
+        List all evaluations.
+
+        Returns:
+            List of all evaluations
+        """
+        with self._lock:
+            return list(self._evaluations.values())

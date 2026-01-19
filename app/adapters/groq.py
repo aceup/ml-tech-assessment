@@ -1,12 +1,13 @@
 """Groq LLM adapter implementation."""
 
 import json
+import time
 
 import pydantic
 from groq import AsyncGroq, Groq
 
 from app.core.logging import get_logger
-from app.ports.llm import LLm
+from app.ports.llm import LLm, LLMResponse
 
 logger = get_logger(__name__)
 
@@ -123,7 +124,7 @@ class GroqAdapter(LLm):
         system_prompt: str,
         user_prompt: str,
         dto: type[pydantic.BaseModel],
-    ) -> pydantic.BaseModel:
+    ) -> LLMResponse:
         """
         Execute asynchronous completion request using Groq.
 
@@ -133,7 +134,7 @@ class GroqAdapter(LLm):
             dto: Pydantic model for response parsing
 
         Returns:
-            Parsed response as Pydantic model
+            LLMResponse: Structured response with parsed result and observability metadata.
         """
         try:
             logger.debug(
@@ -157,7 +158,17 @@ class GroqAdapter(LLm):
             if self._max_tokens:
                 api_params["max_tokens"] = self._max_tokens
 
+            # Add timing
+            start_time = time.perf_counter()
             completion = await self._aclient.chat.completions.create(**api_params)
+            latency_ms = (time.perf_counter() - start_time) * 1000
+
+            # Parse JSON response into Pydantic model
+            response_content = completion.choices[0].message.content
+            if response_content is None:
+                raise ValueError("Groq returned empty response")
+
+            parsed_result = dto.model_validate_json(response_content)
 
             # Log token usage if available
             if hasattr(completion, "usage") and completion.usage:
@@ -167,14 +178,20 @@ class GroqAdapter(LLm):
                     prompt_tokens=completion.usage.prompt_tokens,
                     completion_tokens=completion.usage.completion_tokens,
                     total_tokens=completion.usage.total_tokens,
+                    latency_ms=latency_ms,
                 )
 
-            # Parse JSON response into Pydantic model
-            response_content = completion.choices[0].message.content
-            if response_content is None:
-                raise ValueError("Groq returned empty response")
-
-            return dto.model_validate_json(response_content)
+            # Return structured response with observability metadata
+            return LLMResponse(
+                parsed_result=parsed_result,
+                raw_response=response_content,
+                input_tokens=completion.usage.prompt_tokens,
+                output_tokens=completion.usage.completion_tokens,
+                total_tokens=completion.usage.total_tokens,
+                latency_ms=latency_ms,
+                model=self._model,
+                provider="groq",
+            )
 
         except Exception as e:
             logger.error(

@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.observability import ObservabilityMetadata
+
 
 class AnalysisResult(BaseModel):
     """Analysis result returned by the LLM."""
@@ -48,6 +50,10 @@ class AnalysisResponse(BaseModel):
     transcript: str = Field(
         ...,
         description="Original transcript that was analyzed",
+    )
+    observability: ObservabilityMetadata | None = Field(
+        default=None,
+        description="Observability metadata (optional for backward compatibility)",
     )
 
     model_config = ConfigDict(

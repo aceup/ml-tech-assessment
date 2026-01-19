@@ -12,6 +12,7 @@ from redis import Redis
 from redis.exceptions import RedisError
 
 from app.core.logging import get_logger
+from app.models.evaluation import AnalysisEvaluation
 from app.models.responses import AnalysisResponse
 from app.ports.repository import AnalysisRepository
 from app.utils.exceptions import NotFoundException
@@ -48,7 +49,9 @@ class RedisSyncRepository(AnalysisRepository):
         # Key prefixes for organization
         self.key_prefix = "transcript-analysis"
         self.analysis_key_template = f"{self.key_prefix}:{environment}:analysis:{{}}"
+        self.evaluation_key_template = f"{self.key_prefix}:{environment}:evaluation:{{}}"
         self.index_key = f"{self.key_prefix}:{environment}:index"
+        self.evaluation_index_key = f"{self.key_prefix}:{environment}:evaluation_index"
 
         logger.info(
             "redis_sync_repository_init",
@@ -324,6 +327,151 @@ class RedisSyncRepository(AnalysisRepository):
             logger.error(
                 "redis_sync_clear_failed",
                 message="Failed to clear analyses from Redis",
+                error=str(e),
+            )
+            raise
+
+    def save_evaluation(self, evaluation: AnalysisEvaluation) -> AnalysisEvaluation:
+        """
+        Save human evaluation for an analysis.
+
+        Args:
+            evaluation: Evaluation to save
+
+        Returns:
+            Saved evaluation
+
+        Raises:
+            RedisError: If Redis operation fails
+        """
+        try:
+            evaluation_key = self.evaluation_key_template.format(evaluation.analysis_id)
+
+            # Serialize to JSON
+            evaluation_json = evaluation.model_dump_json()
+
+            # Use pipeline for atomic operations
+            pipe = self.redis.pipeline()
+
+            # Store evaluation data (use same TTL as analyses if configured)
+            if self.ttl_seconds:
+                pipe.setex(evaluation_key, self.ttl_seconds, evaluation_json)
+            else:
+                pipe.set(evaluation_key, evaluation_json)
+
+            # Add to evaluation index
+            pipe.sadd(self.evaluation_index_key, str(evaluation.analysis_id))
+
+            # Execute atomically
+            pipe.execute()
+
+            logger.debug(
+                "redis_sync_save_evaluation_success",
+                message="Evaluation saved to Redis",
+                evaluation_id=str(evaluation.id),
+                analysis_id=str(evaluation.analysis_id),
+                key=evaluation_key,
+            )
+
+            return evaluation
+
+        except RedisError as e:
+            logger.error(
+                "redis_sync_save_evaluation_failed",
+                message="Failed to save evaluation to Redis",
+                evaluation_id=str(evaluation.id),
+                error=str(e),
+            )
+            raise
+
+    def get_evaluation(self, analysis_id: str) -> AnalysisEvaluation | None:
+        """
+        Get evaluation for an analysis.
+
+        Args:
+            analysis_id: Analysis identifier
+
+        Returns:
+            Evaluation if exists, None otherwise
+
+        Raises:
+            RedisError: If Redis operation fails
+        """
+        try:
+            evaluation_key = self.evaluation_key_template.format(analysis_id)
+            evaluation_json = self.redis.get(evaluation_key)
+
+            if not evaluation_json:
+                return None
+
+            # Deserialize from JSON
+            evaluation = AnalysisEvaluation.model_validate_json(evaluation_json)
+
+            logger.debug(
+                "redis_sync_get_evaluation_success",
+                message="Evaluation retrieved from Redis",
+                analysis_id=analysis_id,
+            )
+
+            return evaluation
+
+        except RedisError as e:
+            logger.error(
+                "redis_sync_get_evaluation_failed",
+                message="Failed to retrieve evaluation from Redis",
+                analysis_id=analysis_id,
+                error=str(e),
+            )
+            raise
+
+    def list_evaluations(self) -> list[AnalysisEvaluation]:
+        """
+        List all evaluations.
+
+        Returns:
+            List of all evaluations
+
+        Raises:
+            RedisError: If Redis operation fails
+        """
+        try:
+            # Get all analysis IDs from evaluation index
+            analysis_ids = self.redis.smembers(self.evaluation_index_key)
+
+            if not analysis_ids:
+                return []
+
+            # Fetch all evaluations
+            evaluations: list[AnalysisEvaluation] = []
+            for analysis_id_bytes in analysis_ids:
+                analysis_id = analysis_id_bytes.decode("utf-8")
+                evaluation = self.get_evaluation(analysis_id)
+                if evaluation:
+                    evaluations.append(evaluation)
+                else:
+                    # Clean up stale index entry
+                    self.redis.srem(self.evaluation_index_key, analysis_id)
+                    logger.warning(
+                        "redis_sync_stale_evaluation_entry",
+                        message="Removed stale evaluation index entry",
+                        analysis_id=analysis_id,
+                    )
+
+            # Sort by evaluation time (newest first)
+            evaluations.sort(key=lambda e: e.evaluated_at, reverse=True)
+
+            logger.debug(
+                "redis_sync_list_evaluations_success",
+                message="Listed evaluations from Redis",
+                count=len(evaluations),
+            )
+
+            return evaluations
+
+        except RedisError as e:
+            logger.error(
+                "redis_sync_list_evaluations_failed",
+                message="Failed to list evaluations from Redis",
                 error=str(e),
             )
             raise

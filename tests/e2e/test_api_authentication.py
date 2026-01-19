@@ -17,14 +17,19 @@ class TestAPIKeyAuthentication:
     def app_with_api_key(self):
         """Create app with API key enabled."""
         import os
+        # Save original API key value
+        original_api_key = os.environ.get("API_KEY")
+
         # Set API key in environment
         os.environ["API_KEY"] = "test-api-key-12345"
 
         app = create_app()
         yield app
 
-        # Cleanup
-        if "API_KEY" in os.environ:
+        # Restore original API key value
+        if original_api_key is not None:
+            os.environ["API_KEY"] = original_api_key
+        elif "API_KEY" in os.environ:
             del os.environ["API_KEY"]
 
     @pytest.fixture
