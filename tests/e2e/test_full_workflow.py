@@ -119,7 +119,7 @@ class TestCompleteWorkflows:
         assert get_data["summary"] == data["summary"], "Retrieved summary doesn't match"
         assert get_data["next_actions"] == data["next_actions"], "Retrieved next_actions don't match"
 
-    def test_complete_workflow_with_validation_error_propagates_correctly(self, client):
+    def test_complete_workflow_with_validation_error_propagates_correctly(self, client, auth_headers):
         """
         Test validation error flows through entire stack correctly.
 
@@ -137,7 +137,7 @@ class TestCompleteWorkflows:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": short_transcript},
-            headers={"X-Request-ID": custom_request_id},
+            headers={**auth_headers, "X-Request-ID": custom_request_id},
         )
 
         # Assert - HTTP 422 status
@@ -162,7 +162,7 @@ class TestCompleteWorkflows:
         assert "msg" in error, "Error missing 'msg' field"
         assert "transcript" in str(error["loc"]), "Error doesn't reference 'transcript' field"
 
-    def test_complete_workflow_with_llm_failure_returns_502(self, client, mock_openai_adapter):
+    def test_complete_workflow_with_llm_failure_returns_502(self, client, mock_openai_adapter, auth_headers):
         """
         Test LLM service failure propagates as 502 Bad Gateway.
 
@@ -187,7 +187,7 @@ class TestCompleteWorkflows:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": transcript},
-            headers={"X-Request-ID": request_id},
+            headers={**auth_headers, "X-Request-ID": request_id},
         )
 
         # Assert - HTTP 502 Bad Gateway
@@ -210,7 +210,7 @@ class TestCompleteWorkflows:
         # Assert - Request ID in response header
         assert response.headers["X-Request-ID"] == request_id, "Request ID not in error response header"
 
-    def test_request_id_propagates_through_entire_stack(self, client, mock_openai_adapter):
+    def test_request_id_propagates_through_entire_stack(self, client, mock_openai_adapter, auth_headers):
         """
         Test request ID flows through: header → middleware → state → service logs → error responses → response header.
 
@@ -227,7 +227,7 @@ class TestCompleteWorkflows:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": "short"},  # Too short - validation error
-            headers={"X-Request-ID": custom_request_id},
+            headers={**auth_headers, "X-Request-ID": custom_request_id},
         )
 
         # Assert - Request ID in error response body
@@ -244,7 +244,7 @@ class TestCompleteWorkflows:
         response2 = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": "Valid transcript for testing request ID propagation through successful flow"},
-            headers={"X-Request-ID": success_request_id},
+            headers={**auth_headers, "X-Request-ID": success_request_id},
         )
 
         assert response2.status_code == 200
@@ -254,6 +254,7 @@ class TestCompleteWorkflows:
         response3 = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": "Another valid transcript without custom request ID header"},
+            headers=auth_headers,
         )
 
         assert response3.status_code == 200
@@ -264,7 +265,7 @@ class TestCompleteWorkflows:
         assert len(generated_id) == 36, "Generated request ID not in UUID format"
         assert generated_id.count("-") == 4, "Generated request ID not in UUID format"
 
-    def test_error_details_preserved_through_stack(self, client, mock_openai_adapter):
+    def test_error_details_preserved_through_stack(self, client, mock_openai_adapter, auth_headers):
         """
         Test error context flows from adapter → service → endpoint → HTTP response.
 
@@ -295,7 +296,7 @@ class TestCompleteWorkflows:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": transcript},
-            headers={"X-Request-ID": request_id},
+            headers={**auth_headers, "X-Request-ID": request_id},
         )
 
         # Assert - Error response structure
@@ -319,7 +320,7 @@ class TestCompleteWorkflows:
         # Assert - Response headers include request ID
         assert response.headers["X-Request-ID"] == request_id, "Request ID not in response header"
 
-    def test_concurrent_requests_maintain_isolation(self, client, mock_openai_adapter):
+    def test_concurrent_requests_maintain_isolation(self, client, mock_openai_adapter, auth_headers):
         """
         Test that concurrent requests don't share state or interfere with each other.
 
@@ -338,29 +339,42 @@ class TestCompleteWorkflows:
         ]
 
         # Configure mock to return different results based on input
+        from app.ports.llm import LLMResponse
+
         def mock_llm_response(*args, **kwargs):
             # Extract transcript from call arguments
             call_str = str(args) + str(kwargs)
             if "headache" in call_str.lower():
-                return LLMAnalysisResult(
+                parsed = LLMAnalysisResult(
                     summary="headache summary",
                     next_actions=["headache actions"],
                 )
             elif "fever" in call_str.lower():
-                return LLMAnalysisResult(
+                parsed = LLMAnalysisResult(
                     summary="fever summary",
                     next_actions=["fever actions"],
                 )
             elif "chest" in call_str.lower():
-                return LLMAnalysisResult(
+                parsed = LLMAnalysisResult(
                     summary="chest summary",
                     next_actions=["chest actions"],
                 )
             else:
-                return LLMAnalysisResult(
+                parsed = LLMAnalysisResult(
                     summary="default summary",
                     next_actions=["default actions"],
                 )
+
+            return LLMResponse(
+                parsed_result=parsed,
+                raw_response=f'{{"summary":"{parsed.summary}","next_actions":{parsed.next_actions}}}',
+                input_tokens=100,
+                output_tokens=50,
+                total_tokens=150,
+                latency_ms=200.0,
+                model="gpt-4o",
+                provider="openai",
+            )
 
         mock_openai_adapter.run_completion_async.side_effect = mock_llm_response
 
@@ -369,7 +383,7 @@ class TestCompleteWorkflows:
             return client.get(
                 "/api/v1/analyses/analyze",
                 params={"transcript": transcript},
-                headers={"X-Request-ID": request_id},
+                headers={**auth_headers, "X-Request-ID": request_id},
             )
 
         # Act - Make concurrent requests using thread pool
@@ -414,11 +428,11 @@ class TestCompleteWorkflows:
         # Assert - All analyses persisted independently
         for response in responses:
             analysis_id = response.json()["id"]
-            get_response = client.get(f"/api/v1/analyses/{analysis_id}")
+            get_response = client.get(f"/api/v1/analyses/{analysis_id}", headers=auth_headers)
             assert get_response.status_code == 200, f"Failed to retrieve analysis {analysis_id}"
 
         # Assert - List endpoint returns all analyses
-        list_response = client.get("/api/v1/analyses")
+        list_response = client.get("/api/v1/analyses", headers=auth_headers)
         assert list_response.status_code == 200
         all_analyses = list_response.json()
         assert len(all_analyses) >= 3, "Not all concurrent analyses persisted"
@@ -427,7 +441,7 @@ class TestCompleteWorkflows:
 class TestEdgeCases:
     """Test edge cases in E2E workflows."""
 
-    def test_extremely_long_transcript_within_limits(self, client, mock_openai_adapter):
+    def test_extremely_long_transcript_within_limits(self, client, mock_openai_adapter, auth_headers):
         """Test transcript at maximum allowed length (10000 characters)."""
         # Arrange - Create transcript at max length
         long_transcript = "Patient reports symptoms. " * 400  # ~10000 characters
@@ -437,7 +451,7 @@ class TestEdgeCases:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": long_transcript},
-            headers={"X-Request-ID": "long-transcript-test"},
+            headers={**auth_headers, "X-Request-ID": "long-transcript-test"},
         )
 
         # Assert
@@ -447,7 +461,7 @@ class TestEdgeCases:
         assert len(data["transcript"]) > 9900, "Long transcript was truncated"
         assert "Patient reports symptoms" in data["transcript"], "Transcript content not preserved"
 
-    def test_transcript_exceeding_maximum_length(self, client):
+    def test_transcript_exceeding_maximum_length(self, client, auth_headers):
         """Test transcript exceeding maximum allowed length (>10000 characters)."""
         # Arrange - Create transcript over max length
         too_long_transcript = "Patient reports symptoms. " * 500  # >10000 characters
@@ -456,7 +470,7 @@ class TestEdgeCases:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": too_long_transcript},
-            headers={"X-Request-ID": "too-long-test"},
+            headers={**auth_headers, "X-Request-ID": "too-long-test"},
         )
 
         # Assert
@@ -465,7 +479,7 @@ class TestEdgeCases:
         assert "request_id" in data, "Request ID missing from validation error"
         assert data["request_id"] == "too-long-test", "Request ID not preserved"
 
-    def test_whitespace_only_transcript_rejected(self, client):
+    def test_whitespace_only_transcript_rejected(self, client, auth_headers):
         """Test that whitespace-only transcript is rejected."""
         # Arrange
         whitespace_transcript = "          "  # Only spaces
@@ -474,7 +488,7 @@ class TestEdgeCases:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": whitespace_transcript},
-            headers={"X-Request-ID": "whitespace-test"},
+            headers={**auth_headers, "X-Request-ID": "whitespace-test"},
         )
 
         # Assert - Should return 422 validation error
@@ -497,7 +511,7 @@ class TestEdgeCases:
         assert "whitespace" in error_messages.lower() or "empty" in error_messages.lower(), \
             f"Error should mention whitespace/empty: {error_messages}"
 
-    def test_special_characters_in_transcript(self, client, mock_openai_adapter):
+    def test_special_characters_in_transcript(self, client, mock_openai_adapter, auth_headers):
         """Test transcript with special characters, unicode, and emojis."""
         # Arrange
         special_transcript = (
@@ -510,7 +524,7 @@ class TestEdgeCases:
         response = client.get(
             "/api/v1/analyses/analyze",
             params={"transcript": special_transcript},
-            headers={"X-Request-ID": "special-chars-test"},
+            headers={**auth_headers, "X-Request-ID": "special-chars-test"},
         )
 
         # Assert
@@ -518,7 +532,7 @@ class TestEdgeCases:
         data = response.json()
         assert data["transcript"] == special_transcript, "Special characters not preserved"
 
-    def test_retrieval_of_nonexistent_analysis(self, client):
+    def test_retrieval_of_nonexistent_analysis(self, client, auth_headers):
         """Test GET request for analysis that doesn't exist."""
         # Arrange
         nonexistent_id = "this-id-does-not-exist-12345"
@@ -526,7 +540,7 @@ class TestEdgeCases:
         # Act
         response = client.get(
             f"/api/v1/analyses/{nonexistent_id}",
-            headers={"X-Request-ID": "not-found-test"},
+            headers={**auth_headers, "X-Request-ID": "not-found-test"},
         )
 
         # Assert

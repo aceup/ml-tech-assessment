@@ -64,12 +64,12 @@ def event_loop():
 @pytest.fixture
 def test_settings() -> Settings:
     """
-    Create test settings with API keys disabled.
+    Create test settings with test API key.
 
-    Overrides validation to allow missing API keys in test environment.
+    Uses the test API key from environment for consistent authentication.
     """
     # Create settings with test configuration
-    # Bypass API key validation by setting environment to test mode
+    # API key will be read from environment (set at line 34)
     settings = Settings(
         environment="development",
         debug=True,
@@ -83,7 +83,7 @@ def test_settings() -> Settings:
         enable_docs=True,
         enable_request_logging=False,  # Disable for cleaner test output
         enable_gzip=False,  # Disable compression in tests
-        api_key=None,  # Disable API key authentication in tests
+        # api_key will be read from environment variable (test-api-key-12345)
     )
     return settings
 
@@ -123,19 +123,25 @@ def mock_openai_adapter() -> AsyncMock:
 
     Returns AsyncMock with proper async behavior and default responses.
     """
+    from app.ports.llm import LLMResponse
+
     mock = AsyncMock()
-    mock.run_completion_async = AsyncMock(
-        return_value=LLMAnalysisResult(
-            summary="Test summary from OpenAI",
-            next_actions=["Action one", "Action two", "Action three"],
-        )
+    mock_parsed = LLMAnalysisResult(
+        summary="Test summary from OpenAI",
+        next_actions=["Action one", "Action two", "Action three"],
     )
-    mock.run_completion = MagicMock(
-        return_value=LLMAnalysisResult(
-            summary="Test summary from OpenAI",
-            next_actions=["Action one", "Action two", "Action three"],
-        )
+    mock_llm_response = LLMResponse(
+        parsed_result=mock_parsed,
+        raw_response='{"summary":"Test summary from OpenAI","next_actions":["Action one","Action two","Action three"]}',
+        input_tokens=100,
+        output_tokens=50,
+        total_tokens=150,
+        latency_ms=200.0,
+        model="gpt-4o",
+        provider="openai",
     )
+    mock.run_completion_async = AsyncMock(return_value=mock_llm_response)
+    mock.run_completion = MagicMock(return_value=mock_parsed)  # Sync version still returns parsed result
     return mock
 
 
@@ -146,19 +152,25 @@ def mock_groq_adapter() -> AsyncMock:
 
     Returns AsyncMock with proper async behavior and default responses.
     """
+    from app.ports.llm import LLMResponse
+
     mock = AsyncMock()
-    mock.run_completion_async = AsyncMock(
-        return_value=LLMAnalysisResult(
-            summary="Test summary from Groq",
-            next_actions=["Groq action one", "Groq action two"],
-        )
+    mock_parsed = LLMAnalysisResult(
+        summary="Test summary from Groq",
+        next_actions=["Groq action one", "Groq action two"],
     )
-    mock.run_completion = MagicMock(
-        return_value=LLMAnalysisResult(
-            summary="Test summary from Groq",
-            next_actions=["Groq action one", "Groq action two"],
-        )
+    mock_llm_response = LLMResponse(
+        parsed_result=mock_parsed,
+        raw_response='{"summary":"Test summary from Groq","next_actions":["Groq action one","Groq action two"]}',
+        input_tokens=120,
+        output_tokens=60,
+        total_tokens=180,
+        latency_ms=150.0,
+        model="llama-3.3-70b-versatile",
+        provider="groq",
     )
+    mock.run_completion_async = AsyncMock(return_value=mock_llm_response)
+    mock.run_completion = MagicMock(return_value=mock_parsed)  # Sync version still returns parsed result
     return mock
 
 
