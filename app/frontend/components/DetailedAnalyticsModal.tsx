@@ -172,7 +172,7 @@ export default function DetailedAnalyticsModal({
                                     }`}
                                   >
                                     <Activity className="w-3.5 h-3.5" />
-                                    {analysis.observability.latency_ms}ms
+                                    {Math.round(analysis.observability.latency_ms)}ms
                                   </span>
                                 ) : (
                                   <span className="text-slate-500">N/A</span>

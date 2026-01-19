@@ -189,7 +189,7 @@ export default function AnalysisCard({ analysis, onFeedback }: AnalysisCardProps
               <div>
                 <p className="text-xs text-slate-500">Latency</p>
                 <p className="text-sm font-semibold text-slate-200">
-                  {analysis.observability.latency_ms}ms
+                  {Math.round(analysis.observability.latency_ms)}ms
                 </p>
               </div>
             </div>
