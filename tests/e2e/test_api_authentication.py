@@ -23,7 +23,17 @@ class TestAPIKeyAuthentication:
         # Set API key in environment
         os.environ["API_KEY"] = "test-api-key-12345"
 
+        # Clear cached dependencies to ensure fresh repository
+        from app.api.dependencies import get_repository
+        get_repository.cache_clear()
+
         app = create_app()
+
+        # Clear repository to ensure clean state for tests
+        repo = get_repository()
+        if hasattr(repo, 'clear'):
+            repo.clear()
+
         yield app
 
         # Restore original API key value
