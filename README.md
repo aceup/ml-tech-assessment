@@ -30,6 +30,29 @@
 1. Create a `.env` file in the root directory of the project
 2. Copy the contents of the provided `.env` file into your local `.env` file
 
+## Running the API
+
+Start the server:
+```bash
+uvicorn app.main:app --reload
+```
+
+The API will be available at `http://localhost:8000`
+
+### API Documentation
+
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+### Available Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/transcripts/analyze` | Analyze a single transcript |
+| GET | `/transcripts/{id}` | Get analysis by ID |
+| POST | `/transcripts/analyze/batch` | Analyze multiple transcripts concurrently |
+| GET | `/health` | Health check |
+
 ## Running Tests
 
 To run the tests, make sure you have:
