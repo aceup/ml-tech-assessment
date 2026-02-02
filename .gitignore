@@ -1,1 +1,65 @@
+COMMS.md
+# --- Byte-compiled / optimized / DLL files ---
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments ---
+# It's best practice to keep these out of your repo
+.venv/
+venv/
+ENV/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Unit test / coverage reports ---
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.pyo
+.hypothesis/
+.pytest_cache/
+cover/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints
+
+# --- Environment Variables & Secrets ---
+# NEVER commit these files
 .env
+.venv
+env.ini
+.env.test
+.secrets
+
+# --- IDE Specific Files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS Generated Files ---
+.DS_Store
+Thumbs.db

@@ -8,4 +8,3 @@ RAW_USER_PROMPT = """Given the transcript below, generate:
 
                     Transcript:
                     {transcript}"""
-

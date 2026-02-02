@@ -4,14 +4,32 @@ version = "0.1.0"
 description = ""
 authors = ["jhonvalderrama <jhonvalderrama@aceup.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
 openai = "^1.76.2"
 pydantic-settings = "^2.9.1"
 pytest = "^8.3.5"
+fastapi = {extras = ["standard"], version = "^0.128.0"}
+redis = {extras = ["hiredis"], version = "^7.1.0"}
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest-cov (>=7.0.0,<8.0.0)",
+    "ruff (>=0.14.14,<0.15.0)",
+    "pre-commit (>=4.5.1,<5.0.0)"
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"] # Error, Flake8, Isort rules
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

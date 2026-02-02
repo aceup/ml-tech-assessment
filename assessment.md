@@ -52,4 +52,4 @@ A file defining the interface (ports) for this adapter will be provided.
 - You will find a test running openai adapter. This will be the documentation to build the prompt to analyze the transcript
 - The provided OpenAI adapter utilizes structured output, allowing you to specify a system prompt, a user prompt, and a DTO. The adapter then returns a model instance populated according to the DTO's defined structure.
 - Create a DTO that contains the requested fields.
-- Hexagonal (or clean) architecture consists of distinct layers. Consider creating a separate model layer for the LLM responses. Pay attention to avoiding layer coupling. 
+- Hexagonal (or clean) architecture consists of distinct layers. Consider creating a separate model layer for the LLM responses. Pay attention to avoiding layer coupling.
